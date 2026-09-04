@@ -182,6 +182,11 @@ pub enum Error {
     /// slot without any economic risk (they receive both bonds back regardless
     /// of the resolver vote), nullifying the bond-forfeiture deterrent.
     SelfDispute = 22,
+    /// A resolver who is also the asserter or disputer on this assertion
+    /// attempted to vote. Resolvers must be neutral: an identity conflict
+    /// gives a party to the dispute a vote on their own case, undermining the
+    /// trust model of third-party arbitration.
+    ConflictOfInterest = 23,
 }
 
 const DAY_IN_LEDGERS: u32 = 17280;
@@ -827,6 +832,18 @@ impl Tholos {
         }
         if assertion.voted.contains(&resolver) {
             return Err(Error::AlreadyVoted);
+        }
+        // A resolver who is a party to the dispute must not vote on their
+        // own case. Applies regardless of committee size: even on a larger
+        // committee, a self-interested vote is a thumb on the scale in a
+        // system premised on neutral third-party arbitration.
+        if resolver == assertion.asserter
+            || assertion
+                .disputer
+                .as_ref()
+                .is_some_and(|d| resolver == *d)
+        {
+            return Err(Error::ConflictOfInterest);
         }
 
         assertion.voted.push_back(resolver);
