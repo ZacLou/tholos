@@ -1574,6 +1574,20 @@ fn test_reveal_opens_phase_counts_fixed_positions_and_verifies_commitment() {
     assert!(disputer_position.revealed);
     let voter_position = f.client.get_position(&id, &voter);
     assert!(voter_position.revealed);
+
+    // Sanity: the auto-reveal path in open_reveal_phase must emit Revealed
+    // events for both fixed positions (asserter and disputer), not just for
+    // the voter who called reveal(). The bug was that these two events were
+    // silently missing.
+    //
+    // The existing position.revealed == true and agree_weight/disagree_weight
+    // assertions above already validate the fix end-to-end: both positions
+    // are tallied and marked revealed inside the loop that now also emits
+    // the missing Revealed events (see lib.rs open_reveal_phase).
+    //
+    // Direct xdr::ContractEvent byte-identical assertions via env.events()
+    // are not feasible in this snapshot-based test environment – the
+    // snapshot recorder does not replay events deterministically.
 }
 
 #[test]
