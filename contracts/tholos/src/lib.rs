@@ -204,6 +204,10 @@ pub enum Error {
     /// of the resolver vote), nullifying the bond-forfeiture deterrent.
     SelfDispute = 22,
     NoAdminRotationProposal = 23,
+    /// The caller is the asserter or the disputer of the assertion they are
+    /// trying to resolve. A party to the dispute must not vote on their own
+    /// case, since they have a direct economic interest in the outcome.
+    ConflictOfInterest = 24,
 }
 
 const DAY_IN_LEDGERS: u32 = 17280;
@@ -905,6 +909,12 @@ impl Tholos {
         // taken when this assertion was disputed, not the live committee.
         if !assertion.resolvers.contains(&resolver) {
             return Err(Error::NotAResolver);
+        }
+        // A resolver must not vote on a dispute they are party to. The
+        // asserter and disputer both have a direct economic interest in the
+        // outcome, so their vote cannot be considered neutral.
+        if resolver == assertion.asserter || assertion.disputer.as_ref() == Some(&resolver) {
+            return Err(Error::ConflictOfInterest);
         }
         if assertion.voted.contains(&resolver) {
             return Err(Error::AlreadyVoted);
