@@ -68,7 +68,8 @@ export const Errors = {
    * of the resolver vote), nullifying the bond-forfeiture deterrent.
    */
   22: {message:"SelfDispute"},
-  23: {message:"NoAdminRotationProposal"}
+  23: {message:"NoAdminRotationProposal"},
+  24: {message:"ConflictOfInterest"}
 }
 
 export type Status = {tag: "Pending", values: void} | {tag: "Disputed", values: void} | {tag: "Resolved", values: void};
