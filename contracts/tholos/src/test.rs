@@ -47,12 +47,11 @@ impl Fixture {
         let (token_id, resolvers) = setup(&env);
         let token = token::Client::new(&env, &token_id);
 
-        let contract_id = env.register(Tholos, ());
+        let admin = Address::generate(&env);
+        let contract_id = env.register(Tholos, (admin,));
         let client = TholosClient::new(&env, &contract_id);
 
-        let admin = Address::generate(&env);
         client.initialize(
-            &admin,
             &token_id,
             &DEFAULT_BOND,
             &DEFAULT_WINDOW,
@@ -213,7 +212,6 @@ fn test_cannot_initialize_with_even_resolver_count() {
     let even_resolvers = Vec::from_array(&env, [Address::generate(&env), Address::generate(&env)]);
 
     let result = client.try_initialize(
-        &admin,
         &token_id,
         &DEFAULT_BOND,
         &DEFAULT_WINDOW,
@@ -241,7 +239,6 @@ fn test_cannot_initialize_with_too_many_resolvers() {
     }
 
     let result = client.try_initialize(
-        &admin,
         &token_id,
         &DEFAULT_BOND,
         &DEFAULT_WINDOW,
@@ -261,7 +258,7 @@ fn test_cannot_initialize_with_zero_bond_amount() {
     let client = TholosClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
-    let result = client.try_initialize(&admin, &token_id, &0, &DEFAULT_WINDOW, &resolvers, &0u32);
+    let result = client.try_initialize(&token_id, &0, &DEFAULT_WINDOW, &resolvers, &0u32);
     assert_eq!(result, Err(Ok(Error::InvalidBondAmount)));
 }
 
@@ -275,7 +272,7 @@ fn test_cannot_initialize_with_negative_bond_amount() {
     let client = TholosClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
-    let result = client.try_initialize(&admin, &token_id, &-1, &DEFAULT_WINDOW, &resolvers, &0u32);
+    let result = client.try_initialize(&token_id, &-1, &DEFAULT_WINDOW, &resolvers, &0u32);
     assert_eq!(result, Err(Ok(Error::InvalidBondAmount)));
 }
 
@@ -290,7 +287,6 @@ fn test_cannot_initialize_with_bond_amount_above_max() {
 
     let admin = Address::generate(&env);
     let result = client.try_initialize(
-        &admin,
         &token_id,
         &(MAX_BOND_AMOUNT + 1),
         &DEFAULT_WINDOW,
@@ -311,7 +307,6 @@ fn test_can_initialize_with_bond_amount_exactly_at_max() {
 
     let admin = Address::generate(&env);
     let result = client.try_initialize(
-        &admin,
         &token_id,
         &MAX_BOND_AMOUNT,
         &DEFAULT_WINDOW,
@@ -344,7 +339,6 @@ fn test_rejecting_overflow_prone_bond_amount_leaves_contract_uninitialized() {
 
     let overflowing_bond = MAX_BOND_AMOUNT + 1;
     let result = client.try_initialize(
-        &admin,
         &token_id,
         &overflowing_bond,
         &DEFAULT_WINDOW,
@@ -390,7 +384,6 @@ fn test_bond_amount_overflow_blocked_before_dispute_balance_accumulation() {
     // i128.
     let overflowing_bond = MAX_BOND_AMOUNT + 1;
     let result = client.try_initialize(
-        &admin,
         &token_id,
         &overflowing_bond,
         &DEFAULT_WINDOW,
@@ -426,7 +419,6 @@ fn test_cannot_initialize_with_bond_amount_safe_under_old_bound_but_unsafe_for_r
 
     let old_bound_bond_amount = i128::MAX / 2;
     let result = client.try_initialize(
-        &admin,
         &token_id,
         &old_bound_bond_amount,
         &DEFAULT_WINDOW,
@@ -446,7 +438,7 @@ fn test_cannot_initialize_with_zero_challenge_window() {
     let client = TholosClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
-    let result = client.try_initialize(&admin, &token_id, &DEFAULT_BOND, &0, &resolvers, &0u32);
+    let result = client.try_initialize(&token_id, &DEFAULT_BOND, &0, &resolvers, &0u32);
     assert_eq!(result, Err(Ok(Error::InvalidChallengeWindow)));
 }
 
@@ -461,7 +453,6 @@ fn test_cannot_initialize_with_challenge_window_too_large() {
 
     let admin = Address::generate(&env);
     let result = client.try_initialize(
-        &admin,
         &token_id,
         &DEFAULT_BOND,
         &(MAX_CHALLENGE_WINDOW_SECS + 1),
@@ -477,7 +468,6 @@ fn test_cannot_initialize_twice() {
 
     let admin = f.generate();
     let result = f.client.try_initialize(
-        &admin,
         &f.token_id,
         &DEFAULT_BOND,
         &DEFAULT_WINDOW,
@@ -785,7 +775,6 @@ fn test_cannot_initialize_with_duplicate_resolvers() {
     let duplicated = Vec::from_array(&env, [a.clone(), a.clone(), b]);
 
     let result = client.try_initialize(
-        &admin,
         &token_id,
         &DEFAULT_BOND,
         &DEFAULT_WINDOW,
@@ -808,7 +797,6 @@ fn test_initialize_accepts_distinct_committee() {
 
     let admin = Address::generate(&env);
     let result = client.try_initialize(
-        &admin,
         &token_id,
         &DEFAULT_BOND,
         &DEFAULT_WINDOW,
@@ -843,7 +831,6 @@ fn test_initialize_rejects_duplicate_at_end_of_vector() {
     );
 
     let result = client.try_initialize(
-        &admin,
         &token_id,
         &DEFAULT_BOND,
         &DEFAULT_WINDOW,
@@ -870,7 +857,6 @@ fn test_initialize_reports_invalid_count_before_duplicates() {
     let even_and_duplicated = Vec::from_array(&env, [a.clone(), a.clone()]);
 
     let result = client.try_initialize(
-        &admin,
         &token_id,
         &DEFAULT_BOND,
         &DEFAULT_WINDOW,
@@ -936,12 +922,10 @@ fn fixture_with_reward(bps: u32) -> (Fixture, Address) {
     env.mock_all_auths();
 
     let (token_id, resolvers) = setup(&env);
-    let token = token::Client::new(&env, &token_id);
-    let contract_id = env.register(Tholos, ());
-    let client = TholosClient::new(&env, &contract_id);
-    let admin = Address::generate(&env);
-    client.initialize(
-        &admin,
+    let token = token::Client::new(&env, &token_id);    let admin = Address::generate(&env);
+
+    let contract_id = env.register(Tholos, (admin,));
+    let client = TholosClient::new(&env, &contract_id);    client.initialize(
         &token_id,
         &DEFAULT_BOND,
         &DEFAULT_WINDOW,
@@ -1029,12 +1013,10 @@ fn test_finalize_reward_multiply_does_not_overflow_at_max_bond_and_max_reward_bp
     env.mock_all_auths();
 
     let (token_id, resolvers) = setup(&env);
-    let token = token::Client::new(&env, &token_id);
-    let contract_id = env.register(Tholos, ());
-    let client = TholosClient::new(&env, &contract_id);
-    let admin = Address::generate(&env);
-    client.initialize(
-        &admin,
+    let token = token::Client::new(&env, &token_id);    let admin = Address::generate(&env);
+
+    let contract_id = env.register(Tholos, (admin,));
+    let client = TholosClient::new(&env, &contract_id);    client.initialize(
         &token_id,
         &MAX_BOND_AMOUNT,
         &DEFAULT_WINDOW,
@@ -1069,7 +1051,6 @@ fn test_cannot_initialize_with_reward_bps_over_max() {
     let admin = Address::generate(&env);
 
     let result = client.try_initialize(
-        &admin,
         &token_id,
         &DEFAULT_BOND,
         &DEFAULT_WINDOW,
@@ -1570,7 +1551,6 @@ fn evil_fixture(
 
     let admin = Address::generate(env);
     client.initialize(
-        &admin,
         &evil_token_id,
         &DEFAULT_BOND,
         &DEFAULT_WINDOW,
@@ -1779,13 +1759,14 @@ mod proptest_vote_counting {
             resolvers_std.push(addr);
         }
 
-        let contract_id = env.register(Tholos, ());
-        let client = TholosClient::new(&env, &contract_id);
-        let token = token::Client::new(&env, &token_id);
         let admin = Address::generate(&env);
 
+
+        let contract_id = env.register(Tholos, (admin,));
+        let client = TholosClient::new(&env, &contract_id);
+        let token = token::Client::new(&env, &token_id);
+
         client.initialize(
-            &admin,
             &token_id,
             &DEFAULT_BOND,
             &DEFAULT_WINDOW,
@@ -2015,7 +1996,6 @@ mod proptest_initialize_bounds {
             let admin = Address::generate(&env);
 
             let result = client.try_initialize(
-                &admin,
                 &token_id,
                 &bond_amount,
                 &challenge_window_secs,
@@ -2058,7 +2038,6 @@ mod proptest_initialize_bounds {
             let admin = Address::generate(&env);
 
             let result = client.try_initialize(
-                &admin,
                 &token_id,
                 &bond_amount,
                 &challenge_window_secs,
