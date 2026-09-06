@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { jobs as seedJobs, type Job, type Milestone, type MilestoneStatus } from "../data/jobs";
 import { JobsContext, type JobsContextValue, type NewJobInput } from "./jobs-context";
 
@@ -33,8 +33,30 @@ function findMilestone(jobs: Job[], jobId: string, milestoneId: string): Milesto
   return jobs.find((job) => job.id === jobId)?.milestones.find((m) => m.id === milestoneId);
 }
 
+const STORAGE_KEY = "vero-freelance-jobs";
+
+function loadJobs(): Job[] {
+  if (typeof window === "undefined") return seedJobs;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return seedJobs;
+    const parsed = JSON.parse(raw) as Job[];
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : seedJobs;
+  } catch {
+    return seedJobs;
+  }
+}
+
 export function JobsProvider({ children }: { children: ReactNode }) {
-  const [jobs, setJobs] = useState<Job[]>(seedJobs);
+  const [jobs, setJobs] = useState<Job[]>(loadJobs);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));
+    } catch {
+      // Storage full or private mode; silently drop.
+    }
+  }, [jobs]);
 
   const createJob = useCallback((input: NewJobInput) => {
     const jobId = `job-${crypto.randomUUID()}`;
