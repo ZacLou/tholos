@@ -770,7 +770,7 @@ impl Tholos {
     /// opened under different expectations.
     ///
     /// Only callable by the admin. Fails with `InvalidStallTimeout` if
-    /// `stall_timeout_secs` exceeds `MAX_STALL_TIMEOUT_SECS` (30 days).
+    /// `stall_timeout_secs` exceeds `MAX_STALL_TIMEOUT_SECS` (7 days).
     pub fn set_stall_timeout(env: Env, stall_timeout_secs: u64) -> Result<(), Error> {
         let admin: Address = env
             .storage()
@@ -989,9 +989,15 @@ impl Tholos {
         // because this is the moment both bonds are committed and the
         // committee snapshot takes over. Stored as a separate key so
         // pre-upgrade Assertion structs decode unchanged (#184).
+        let disputed_at_key = DataKey::DisputedAt(id);
         env.storage()
             .persistent()
-            .set(&DataKey::DisputedAt(id), &env.ledger().timestamp());
+            .set(&disputed_at_key, &env.ledger().timestamp());
+        env.storage().persistent().extend_ttl(
+            &disputed_at_key,
+            ASSERTION_LIFETIME_THRESHOLD,
+            ASSERTION_BUMP_AMOUNT,
+        );
         Self::set_assertion(&env, id, &assertion);
 
         let token_id: Address = Self::get(&env, &DataKey::Token)?;
